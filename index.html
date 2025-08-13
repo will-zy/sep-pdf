@@ -36,9 +36,9 @@
 
   <style>
     /* aparência nativa */
-    input[type="checkbox"] {
-      accent-color: #0057B7;
-    }
+    input[type="checkbox"] { accent-color: #0057B7; }
+    input[type="radio"] { accent-color:#0057B7; }
+
     input[type="checkbox"].with-svg {
       -webkit-appearance: none; -moz-appearance: none; appearance: none;
       display: inline-block; vertical-align: middle; user-select: none; flex-shrink: 0;
@@ -113,6 +113,35 @@
             <input type="checkbox" id="autoZipToggle" class="with-svg" checked />
             <span class="text-base font-medium cursor-pointer">ZIP automático</span>
           </label>
+        </div>
+
+        <!-- arquivos -->
+        <div class="space-y-2">
+          <label class="block text-base font-semibold">3. Nome dos arquivos:</label>
+          <div class="flex flex-wrap items-center gap-x-6 gap-y-2">
+            <label class="inline-flex items-center gap-2">
+              <input type="radio" name="nameMode" value="orig" checked>
+              <span>Original + Nome</span>
+            </label>
+            <label class="inline-flex items-center gap-2">
+              <input type="radio" name="nameMode" value="name_only">
+              <span>Nome</span>
+            </label>
+            <label class="inline-flex items-center gap-2">
+              <input type="radio" name="nameMode" value="prefix">
+              <span>Prefixo + Nome</span>
+            </label>
+            <input
+              type="text"
+              id="namePrefix"
+              class="rounded-md border border-slate-300 dark:border-gray-700 bg-white dark:bg-gray-900 px-3 py-2 w-60 disabled:opacity-50"
+              placeholder="Ex.: holerite"
+              disabled
+            >
+          </div>
+          <p class="text-xs text-slate-500 dark:text-slate-400">
+            O nome extraído é higienizado (sem acentos/espaços, com <code>_</code>).
+          </p>
         </div>
       </div>
 
@@ -211,6 +240,8 @@
     const selectAllToggle= document.getElementById('selectAllToggle');
     const progressBar    = document.getElementById('progressBar');
     const progressText   = document.getElementById('progressText');
+    const nameModeEls    = document.querySelectorAll('input[name="nameMode"]');
+    const namePrefixEl   = document.getElementById('namePrefix');
 
     const HEADER_BOTTOM_Y_PERCENT = 15;
 
@@ -251,6 +282,50 @@
       updateThemeIcon(willDark);
     }
 
+    // helpers zip
+    let _jszipLoader;
+    function loadScriptOnce(src) {
+      if (_jszipLoader) return _jszipLoader;
+      _jszipLoader = new Promise((resolve, reject) => {
+        const s = document.createElement('script');
+        s.src = src; s.async = true; s.defer = true;
+        s.onload = () => resolve();
+        s.onerror = () => reject(new Error('Falha ao carregar ' + src));
+        document.head.appendChild(s);
+      });
+      return _jszipLoader;
+    }
+    async function getJSZip() {
+      if (window.JSZip) return window.JSZip;
+      await loadScriptOnce('https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js');
+      if (!window.JSZip) throw new Error('JSZip não disponível após carregar o script.');
+      return window.JSZip;
+    }
+    function saveBlob(blob, filename) {
+      const url = URL.createObjectURL(blob);
+      const a = Object.assign(document.createElement('a'), { href: url, download: filename });
+      document.body.appendChild(a); a.click(); a.remove();
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+    }
+
+    // helpers de nomenclatura
+    function sanitizePart(s) {
+      return (s || '')
+        .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9\s_-]/g, '')
+        .trim().replace(/\s+/g, '_')
+        .slice(0, 80);
+    }
+    function getSelectedNameMode() {
+      const el = document.querySelector('input[name="nameMode"]:checked');
+      return el ? el.value : 'orig';
+    }
+    function updatePrefixState() {
+      const on = getSelectedNameMode() === 'prefix';
+      namePrefixEl.disabled = !on;
+      namePrefixEl.classList.toggle('opacity-50', !on);
+    }
+
     // extração do texto
     async function extractTextPerPage(file, headerOnly, useOCR) {
       const url = URL.createObjectURL(file);
@@ -266,7 +341,7 @@
         const textContent = await page.getTextContent();
         let allItems = textContent.items;
 
-        // filtrar cabeçalho (coordenada Y em PDF.js)
+        // filtrar cabeçalho
         if (headerOnly) {
           const headerBottom = viewport.height * (HEADER_BOTTOM_Y_PERCENT/100);
           allItems = allItems.filter(item => item.transform[5] >= (viewport.height - headerBottom));
@@ -360,7 +435,6 @@
         const set = map.get(key);
         for (let p = start; p <= end; p++) set.add(p);
       }
-      // ordenado
       const ordered = new Map();
       for (const [key, set] of map) ordered.set(key, [...set].sort((a,b)=>a-b));
       return ordered;
@@ -412,7 +486,6 @@
 
       refreshSelectAllState();
       previewSection.classList.remove('hidden');
-      // habilitar botões
       const hasAny = mergedRuns.size > 0;
       downloadPdfsBtn.disabled = !hasAny;
       downloadZipBtn.disabled  = !hasAny;
@@ -449,13 +522,31 @@
         copiedPages.forEach(page => pdfDoc.addPage(page));
         const pdfBytes = await pdfDoc.save();
 
+        // nomes dos arquivos
         const sanitizedKey = (key || 'sem_nome')
           .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
           .replace(/[^a-zA-Z0-9\s_-]/g, '').trim().replace(/\s+/g, '_')
           .slice(0, 80) || 'sem_nome';
 
-        const originalName = originalPdfFile.name.replace(/\.pdf$/i, '');
-        const newFileName = `${originalName}_${sanitizedKey}.pdf`;
+        const originalNameSan = sanitizePart(originalPdfFile.name.replace(/\.pdf$/i, ''));
+        const prefixSan       = sanitizePart(namePrefixEl.value);
+
+        let baseName;
+        switch (getSelectedNameMode()) {
+          case 'name_only':
+            baseName = sanitizedKey;
+            break;
+          case 'prefix':
+            baseName = (prefixSan ? (prefixSan + '_') : '') + sanitizedKey;
+            break;
+          case 'orig':
+          default:
+            baseName = originalNameSan + '_' + sanitizedKey;
+            break;
+        }
+        const newFileName = `${baseName || 'arquivo'}.pdf`;
+        // --------------------------
+
         outputs.push({ name: newFileName, bytes: pdfBytes });
 
         done++;
@@ -466,26 +557,24 @@
       const shouldZip = forceZip || (autoZipToggle.checked && outputs.length >= zipThreshold);
 
       if (shouldZip) {
-        const { default: JSZip } = await import('https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js');
-        const zip = new JSZip();
-        outputs.forEach(o => zip.file(o.name, o.bytes));
-        const content = await zip.generateAsync({ type: 'blob' });
-        const zipName = originalPdfFile.name.replace(/\.pdf$/i, '') + '_agrupado.zip';
-
-        const url = URL.createObjectURL(content);
-        const a = Object.assign(document.createElement('a'), { href: url, download: zipName });
-        document.body.appendChild(a); a.click(); document.body.removeChild(a);
-        setTimeout(() => URL.revokeObjectURL(url), 2000);
-
-        logOutput.textContent += `\n\nZIP gerado: ${zipName}`;
-      } else {
-        for (const o of outputs) {
-          const blob = new Blob([o.bytes], { type: 'application/pdf' });
-          const url = URL.createObjectURL(blob);
-          const a = Object.assign(document.createElement('a'), { href: url, download: o.name });
-          document.body.appendChild(a); a.click(); document.body.removeChild(a);
-          setTimeout(() => URL.revokeObjectURL(url), 2000);
+        try {
+          const JSZip = await getJSZip();
+          const zip = new JSZip();
+          for (const o of outputs) zip.file(o.name, o.bytes);
+          const content = await zip.generateAsync({
+            type: 'blob',
+            compression: 'DEFLATE',
+            compressionOptions: { level: 6 }
+          });
+          const zipName = originalPdfFile.name.replace(/\.pdf$/i, '') + '_agrupado.zip';
+          saveBlob(content, zipName);
+          logOutput.textContent += `\n\nZIP gerado: ${zipName}`;
+        } catch (e) {
+          logOutput.textContent += `\n[ZIP] Falhou (${e.message}). Baixando PDFs individualmente...`;
+          for (const o of outputs) saveBlob(new Blob([o.bytes], { type: 'application/pdf' }), o.name);
         }
+      } else {
+        for (const o of outputs) saveBlob(new Blob([o.bytes], { type: 'application/pdf' }), o.name);
         logOutput.textContent += '\n\nDownloads concluídos!';
       }
 
@@ -510,7 +599,7 @@
 
     // eventos - ui
     document.addEventListener('DOMContentLoaded', () => {
-      // tema: inicia SEMPRE claro quando não houver preferência salva
+      // tema
       const savedTheme = localStorage.getItem('theme');
       const isDark = savedTheme === 'dark';
       htmlElement.classList.toggle('dark', isDark);
@@ -521,6 +610,16 @@
       const lsHeader = localStorage.getItem('headerOnly'); if (lsHeader !== null) headerOnlyEl.checked = lsHeader === 'true';
       const lsOcr = localStorage.getItem('ocrToggle'); if (lsOcr !== null) ocrToggleEl.checked = lsOcr === 'true';
       const lsAutoZip = localStorage.getItem('autoZipToggle'); if (lsAutoZip !== null) autoZipToggle.checked = lsAutoZip === 'true';
+
+      // naming prefs
+      const lsMode = localStorage.getItem('fileNameMode');
+      if (lsMode) {
+        const m = document.querySelector(`input[name="nameMode"][value="${lsMode}"]`);
+        if (m) m.checked = true;
+      }
+      const lsPrefix = localStorage.getItem('fileNamePrefix');
+      if (lsPrefix) namePrefixEl.value = lsPrefix;
+      updatePrefixState();
     });
 
     themeToggle.addEventListener('click', toggleTheme);
@@ -528,6 +627,17 @@
     headerOnlyEl.addEventListener('change', () => localStorage.setItem('headerOnly', String(headerOnlyEl.checked)));
     ocrToggleEl.addEventListener('change', () => localStorage.setItem('ocrToggle', String(ocrToggleEl.checked)));
     autoZipToggle.addEventListener('change', () => localStorage.setItem('autoZipToggle', String(autoZipToggle.checked)));
+
+    // listeners naming
+    nameModeEls.forEach(el => {
+      el.addEventListener('change', () => {
+        localStorage.setItem('fileNameMode', getSelectedNameMode());
+        updatePrefixState();
+      });
+    });
+    namePrefixEl.addEventListener('input', () => {
+      localStorage.setItem('fileNamePrefix', namePrefixEl.value);
+    });
 
     function fileLooksPdf(file) {
       if (!file) return false;
