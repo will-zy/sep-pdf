@@ -1,233 +1,643 @@
 <!DOCTYPE html>
 <html lang="pt-br">
 <head>
-    <meta charset="UTF-8">
-    <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>Separador e Agrupador de PDF por Nome</title>
-     ZF
-    <script src="https://cdn.tailwindcss.com"></script>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>PDF → Nome</title>
+
+  <script src="https://cdn.tailwindcss.com"></script>
+  <script>
+    tailwind.config = {
+      darkMode: 'class',
+      theme: {
+        extend: {
+          colors: {
+            'primary-blue': '#0057B7',
+            'primary-blue-dark': '#004A9E',
+            'primary-blue-light': '#E0F2FF',
+            'primary-blue-lighter': '#C0E0FF',
+          },
+          boxShadow: {
+            '3xl': '0 35px 60px -15px rgba(0, 0, 0, 0.5)',
+          }
+        }
+      }
+    }
+  </script>
+
+  <!-- bootstrap do tema -->
+  <script>
+    (function () {
+      const saved = localStorage.getItem('theme');
+      if (saved === 'dark') document.documentElement.classList.add('dark');
+      else document.documentElement.classList.remove('dark'); // força claro por padrão
+    })();
+  </script>
+
+  <style>
+    /* aparência nativa */
+    input[type="checkbox"] {
+      accent-color: #0057B7;
+    }
+    input[type="checkbox"].with-svg {
+      -webkit-appearance: none; -moz-appearance: none; appearance: none;
+      display: inline-block; vertical-align: middle; user-select: none; flex-shrink: 0;
+      background-origin: border-box;
+      border: 1px solid rgb(100 116 139/1); /* slate-500 */
+      border-radius: 0.375rem;
+      width: 1.25rem; height: 1.25rem;
+      background: white;
+    }
+    input[type="checkbox"].with-svg:checked {
+      border-color: #0057B7; background-color: #0057B7;
+      background-image:url("data:image/svg+xml,%3csvg viewBox='0 0 16 16' fill='white' xmlns='http://www.w3.org/2000/svg'%3e%3cpath d='M12.207 4.793a1 1 0 010 1.414l-5 5a1 1 0 01-1.414 0l-2-2a1 1 0 011.414-1.414L6.5 9.086l4.293-4.293a1 1 0 011.414 0z'/%3e%3c/svg%3e");
+      background-position:center; background-repeat:no-repeat; background-size:100% 100%;
+    }
+  </style>
 </head>
-<body class="bg-slate-100 p-4 sm:p-6 md:p-8">
-    <div class="max-w-2xl mx-auto mt-10 bg-white p-6 rounded-lg shadow-md">
-         Aplicação 
-        <div class="mb-4">
-            <h1 class="font-bold text-2xl mb-2">PDF por Nome</h1>
-            <p class="text-slate-600">Esta ferramenta usa um rótulo (ex: "Gestor:") para encontrar um nome e agrupa todas as ocorrências daquele nome em um único PDF.</p>
-        </div>
 
-        <div class="space-y-4 mb-6">
-            <div>
-                <label for="pdfFile" class="block text-sm font-medium text-slate-700 mb-1">1. Selecione o arquivo PDF:</label>
-                <input type="file" id="pdfFile" accept=".pdf" class="block w-full text-sm text-slate-500
-                    file:mr-4 file:py-2 file:px-4
-                    file:rounded-full file:border-0
-                    file:text-sm file:font-semibold
-                    file:bg-blue-50 file:text-blue-700
-                    hover:file:bg-blue-100 cursor-pointer">
-            </div>
+<body class="bg-white text-slate-800 dark:bg-gray-950 dark:text-slate-100 min-h-screen flex flex-col items-center justify-between p-4 sm:p-6 md:p-8 font-sans transition-colors duration-300 ease-in-out">
 
-            <div>
-                <label for="labels" class="block text-sm font-medium text-slate-700 mb-1">2. Rótulos de busca (separados por vírgula):</label>
-                <input type="text" id="labels" value="Gestor:,Supervisor:,Responsável:" placeholder="Gestor:,Supervisor:,Responsável:"
-                    class="mt-1 block w-full rounded-md border-slate-300 shadow-sm p-2
-                    focus:border-blue-300 focus:ring focus:ring-blue-200 focus:ring-opacity-50">
-            </div>
+  <!-- card principal -->
+  <div class="max-w-4xl w-full mx-auto my-auto bg-white dark:bg-gray-900 p-8 rounded-2xl shadow-3xl dark:shadow-md border border-slate-200 dark:border-gray-800 relative overflow-hidden transition-colors duration-300 ease-in-out">
+    <div class="absolute inset-0 bg-gradient-to-br from-primary-blue/5 via-transparent to-primary-blue/10 opacity-60 rounded-2xl dark:hidden"></div>
 
-            <div class="flex items-center space-x-2">
-                <input type="checkbox" id="headerOnly" class="h-4 w-4 text-blue-600 border-slate-300 rounded focus:ring-blue-500">
-                <label for="headerOnly" class="text-sm font-medium text-slate-700">Procurar somente no cabeçalho</label>
-            </div>
+    <div class="relative z-10">
+      <!-- tema -->
+      <div class="fixed top-4 right-4 z-50">
+        <button id="themeToggle" class="p-2 rounded-full bg-slate-200 dark:bg-gray-700 text-slate-700 dark:text-slate-100 hover:bg-slate-300 dark:hover:bg-gray-600 transition-colors duration-200 focus:outline-none focus:ring-2 focus:ring-primary-blue/50" aria-label="Alternar tema">
+          <svg id="sunIcon" class="h-6 w-6" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M12 3v1m0 16v1m9-9h1M4 12H3m15.325 6.675l-.707-.707M6.343 6.343l-.707-.707m12.728 0l-.707.707M6.343 17.657l-.707.707M16 12a4 4 0 11-8 0 4 4 0 018 0z"/>
+          </svg>
+          <svg id="moonIcon" class="h-6 w-6 hidden" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+            <path stroke-linecap="round" stroke-linejoin="round" d="M20.354 15.354A9 9 0 018.646 3.646 9.003 9.003 0 0012 21a9.003 9.003 0 008.354-5.646z"/>
+          </svg>
+        </button>
+      </div>
+
+      <div class="mb-8 text-center pb-6 border-b border-slate-200 dark:border-gray-800">
+        <h1 class="font-extrabold text-4xl mb-2 text-primary-blue tracking-tight">PDF → Nome</h1>
+        <p class="text-slate-600 dark:text-slate-400 text-lg">Use um rótulo (ex.: “Gestor:”) para encontrar o nome e juntar todas as páginas desse nome em um único PDF.</p>
+      </div>
+
+      <!-- inputs -->
+      <div class="space-y-6 mb-8">
+        <div>
+          <label for="pdfFile" class="block text-base font-semibold">1. Selecione o arquivo PDF:</label>
+          <div id="dropZone" class="relative flex flex-col items-center justify-center p-8 border-2 border-dashed border-primary-blue/50 rounded-lg cursor-pointer transition-all duration-200 bg-slate-50 hover:bg-slate-100 dark:bg-gray-800/50 dark:hover:bg-gray-800 dark:border-gray-600" aria-label="Solte o PDF aqui">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-12 w-12 text-primary-blue mb-3" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2" aria-hidden="true">
+              <path stroke-linecap="round" stroke-linejoin="round" d="M7 16a4 4 0 01-.88-7.903A5 5 0 0115.9 6L16 6a5 5 0 011 9.9M15 13l-3-3m0 0l-3 3m3-3v12"/>
+            </svg>
+            <p class="text-lg font-medium">Arraste e solte seu PDF aqui ou <span class="text-primary-blue hover:underline">clique para selecionar</span></p>
+            <p id="fileNameDisplay" class="text-sm text-slate-500 dark:text-slate-400 mt-2"></p>
+            <input type="file" id="pdfFile" accept=".pdf" class="absolute inset-0 opacity-0 cursor-pointer" aria-label="Selecionar arquivo PDF">
+          </div>
         </div>
 
         <div>
-            <button id="processBtn" class="w-full bg-blue-600 hover:bg-blue-700 text-white font-bold py-2 px-4 rounded-md
-                transition duration-150 ease-in-out disabled:opacity-50 disabled:cursor-not-allowed">
-                Processar e Agrupar por Nome
-            </button>
+          <label for="labels" class="block text-base font-semibold">2. Rótulos de busca (separados por vírgula):</label>
+          <input type="text" id="labels" value="Gestor:,Supervisor:,Responsável:" placeholder="Gestor:,Supervisor:,Responsável:" class="mt-1 block w-full rounded-lg border border-slate-300 dark:border-gray-700 shadow-sm p-3 bg-white dark:bg-gray-900 text-slate-800 dark:text-slate-100 focus:border-primary-blue focus:ring-2 focus:ring-primary-blue/30 outline-none transition">
+          <p class="text-xs mt-1 text-slate-500 dark:text-slate-400">Aceita com ou sem “:”, e ignora sufixos como “ - Unidade”, “CPF”, etc.</p>
         </div>
+
+        <div class="grid grid-cols-1 sm:grid-flow-col sm:auto-cols-max items-center gap-x-6 gap-y-3">
+          <label class="flex items-center gap-3">
+            <input type="checkbox" id="headerOnly" class="with-svg" />
+            <span class="text-base font-medium cursor-pointer">Procurar somente no cabeçalho</span>
+          </label>
+          <label class="flex items-center gap-3">
+            <input type="checkbox" id="ocrToggle" class="with-svg" />
+            <span class="text-base font-medium cursor-pointer">Ativar OCR</span>
+          </label>
+          <label class="flex items-center gap-3">
+            <input type="checkbox" id="autoZipToggle" class="with-svg" checked />
+            <span class="text-base font-medium cursor-pointer">ZIP automático</span>
+          </label>
+        </div>
+      </div>
+
+      <!-- ações -->
+      <div class="grid sm:grid-cols-2 gap-3">
+        <button id="processBtn" class="w-full bg-primary-blue hover:bg-primary-blue-dark text-white font-bold py-3.5 px-4 rounded-lg text-xl shadow-lg hover:shadow-xl transition-all disabled:opacity-50 disabled:pointer-events-none">
+          Agrupar
+        </button>
+        <div class="grid grid-cols-3 gap-3">
+          <button id="downloadPdfsBtn" class="bg-slate-200 dark:bg-gray-800 text-slate-800 dark:text-slate-100 font-semibold rounded-lg px-3 py-3 disabled:opacity-50 disabled:pointer-events-none" disabled>Baixar PDFs</button>
+          <button id="downloadZipBtn"  class="bg-slate-200 dark:bg-gray-800 text-slate-800 dark:text-slate-100 font-semibold rounded-lg px-3 py-3 disabled:opacity-50 disabled:pointer-events-none" disabled>Baixar ZIP</button>
+          <button id="exportCsvBtn"     class="bg-slate-200 dark:bg-gray-800 text-slate-800 dark:text-slate-100 font-semibold rounded-lg px-3 py-3 disabled:opacity-50 disabled:pointer-events-none" disabled>Exportar CSV</button>
+        </div>
+      </div>
+
+      <!-- progresso -->
+      <div class="mt-6">
+        <div class="flex items-center justify-between mb-2">
+          <span class="text-sm font-medium">Progresso</span>
+          <span id="progressText" class="text-xs text-slate-500 dark:text-slate-400">Aguardando...</span>
+        </div>
+        <div class="w-full bg-slate-200 dark:bg-gray-800 rounded h-2" aria-hidden="true">
+          <div id="progressBar" class="h-2 bg-primary-blue rounded" style="width:0%" role="progressbar" aria-valuemin="0" aria-valuemax="100" aria-valuenow="0"></div>
+        </div>
+      </div>
+
     </div>
+  </div>
 
-    <div id="loader" class="hidden mt-4 text-center text-blue-600 font-medium">
-        <span class="animate-spin inline-block w-5 h-5 border-2 border-current border-t-transparent rounded-full mr-2"></span>
-        Processando... Por favor, aguarde.
+  <!-- loader acessível -->
+  <div id="loader" class="mt-6 text-center text-primary-blue font-semibold text-xl hidden" role="status" aria-live="polite" aria-busy="true">
+    <span class="animate-spin inline-block w-7 h-7 border-4 border-current border-t-transparent rounded-full mr-3"></span>
+    Processando... Por favor, aguarde.
+  </div>
+
+  <!-- pré-visualização -->
+  <section id="previewSection" class="max-w-4xl w-full mx-auto mt-10 hidden">
+    <div class="flex items-center justify-between mb-3">
+      <h2 class="text-2xl font-bold">Pré-visualização dos Grupos</h2>
+      <label class="flex items-center gap-2">
+        <input type="checkbox" id="selectAllToggle" class="with-svg">
+        <span class="text-sm">Selecionar todos</span>
+      </label>
     </div>
-
-    <h2 class="text-xl font-bold mt-8 mb-2 text-slate-800 max-w-2xl mx-auto">Log de Processamento</h2>
-    <div class="max-w-2xl mx-auto bg-slate-50 border border-slate-200 rounded-md p-4 overflow-auto max-h-60">
-        <pre id="log" class="font-mono text-sm whitespace-pre-wrap break-words">Aguardando arquivo para processar...</pre>
+    <div class="overflow-hidden rounded-lg border border-slate-200 dark:border-gray-800">
+      <table class="min-w-full divide-y divide-slate-200 dark:divide-gray-800">
+        <thead class="bg-slate-100 dark:bg-gray-800/60">
+          <tr>
+            <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Sel.</th>
+            <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Nome</th>
+            <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Páginas</th>
+            <th class="px-4 py-3 text-left text-xs font-medium uppercase tracking-wider">Contagem</th>
+          </tr>
+        </thead>
+        <tbody id="previewBody" class="divide-y divide-slate-200 dark:divide-gray-800 bg-white dark:bg-gray-900"></tbody>
+      </table>
     </div>
+  </section>
 
-    <script src="./lib/pdf-lib.min.js"></script>
-    <script type="module">
-        import * as pdfjsLib from './lib/pdf.mjs';
-        pdfjsLib.GlobalWorkerOptions.workerSrc = './lib/pdf.worker.mjs';
+  <!-- log -->
+  <h2 class="text-2xl font-bold mt-10 mb-4 max-w-4xl w-full mx-auto">Log de Processamento</h2>
+  <div class="max-w-4xl w-full mx-auto bg-slate-50 dark:bg-gray-900 border border-slate-200 dark:border-gray-800 rounded-lg p-5 overflow-auto max-h-72 shadow-inner">
+    <pre id="log" class="font-mono text-sm whitespace-pre-wrap break-words text-slate-700 dark:text-slate-300" aria-live="polite">Aguardando arquivo para processar...</pre>
+  </div>
 
-        const pdfFileInput = document.getElementById('pdfFile');
-        const labelsInput = document.getElementById('labels');
-        const headerOnlyCheckbox = document.getElementById('headerOnly');
-        const processBtn = document.getElementById('processBtn');
-        const logOutput = document.getElementById('log');
-        const loader = document.getElementById('loader');
+  <footer class="mt-16 text-center text-slate-500 text-sm">
+    Feito com <span class="text-red-500">❤️</span> por Willian
+  </footer>
 
-        const HEADER_BOTTOM_Y_PERCENT = 15;
+  <!-- libs -->
+  <script src="./lib/pdf-lib.min.js"></script>
+  <script type="module">
+    import * as pdfjsLib from './lib/pdf.mjs';
+    pdfjsLib.GlobalWorkerOptions.workerSrc = './lib/pdf.worker.mjs';
 
-        /**
-         * CORRIGIDO: Extrai texto recriando as linhas para que a busca funcione de forma confiável.
-         */
-        async function extractTextPerPage(file, headerOnly) {
-            const pdf = await pdfjsLib.getDocument(URL.createObjectURL(file)).promise;
-            const numPages = pdf.numPages;
-            const pagesText = [];
-            logOutput.textContent += `\n- Total de páginas detectadas: ${numPages}`;
-            for (let i = 1; i <= numPages; i++) {
-                const page = await pdf.getPage(i);
-                const viewport = page.getViewport({ scale: 1 });
-                const textContent = await page.getTextContent();
+    // elementos
+    const pdfFileInput   = document.getElementById('pdfFile');
+    const labelsInput    = document.getElementById('labels');
+    const headerOnlyEl   = document.getElementById('headerOnly');
+    const ocrToggleEl    = document.getElementById('ocrToggle');
+    const autoZipToggle  = document.getElementById('autoZipToggle');
+    const processBtn     = document.getElementById('processBtn');
+    const downloadZipBtn = document.getElementById('downloadZipBtn');
+    const downloadPdfsBtn= document.getElementById('downloadPdfsBtn');
+    const exportCsvBtn   = document.getElementById('exportCsvBtn');
+    const logOutput      = document.getElementById('log');
+    const loader         = document.getElementById('loader');
+    const dropZone       = document.getElementById('dropZone');
+    const fileNameDisplay= document.getElementById('fileNameDisplay');
+    const themeToggle    = document.getElementById('themeToggle');
+    const sunIcon        = document.getElementById('sunIcon');
+    const moonIcon       = document.getElementById('moonIcon');
+    const htmlElement    = document.documentElement;
+    const previewSection = document.getElementById('previewSection');
+    const previewBody    = document.getElementById('previewBody');
+    const selectAllToggle= document.getElementById('selectAllToggle');
+    const progressBar    = document.getElementById('progressBar');
+    const progressText   = document.getElementById('progressText');
 
-                let allItems = textContent.items;
-                if (headerOnly) {
-                    const headerTop = viewport.height * (1 - HEADER_BOTTOM_Y_PERCENT / 100);
-                    allItems = allItems.filter(item => item.transform[5] >= headerTop);
-                }
-                if (allItems.length === 0) {
-                    pagesText.push("");
-                    continue;
-                }
-                allItems.sort((a, b) => {
-                    if (Math.abs(a.transform[5] - b.transform[5]) < 2) {
-                        return a.transform[4] - b.transform[4];
-                    }
-                    return b.transform[5] - a.transform[5];
-                });
-                let fullText = '';
-                if(allItems.length > 0) {
-                    let lastY = allItems[0].transform[5];
-                    for (const item of allItems) {
-                        if (Math.abs(item.transform[5] - lastY) > 5) {
-                            fullText += '\n';
-                        }
-                        fullText += item.str;
-                        lastY = item.transform[5];
-                    }
-                }
-                pagesText.push(fullText);
-            }
-            return pagesText;
+    const HEADER_BOTTOM_Y_PERCENT = 15;
+
+    // estado
+    let mergedRunsGlobal = new Map(); // Map(nome -> [pages])
+    let selectedKeys = new Set();     // chaves selecionadas no preview
+
+    // util
+    function setProgress(pct, text='') {
+      pct = Math.max(0, Math.min(100, pct));
+      progressBar.style.width = `${pct}%`;
+      progressBar.setAttribute('aria-valuenow', String(pct));
+      if (text) progressText.textContent = text;
+    }
+    function escapeRegex(s){ return s.replace(/[.*+?^${}()|[\]\\]/g, '\\$&'); }
+    function cleanName(s) {
+      return (s||'')
+        .replace(/\s{2,}/g, ' ')
+        .replace(/\s*[-–—•|].*$/, '')
+        .replace(/\b(CPF|Matr(í|i)cula|Unidade|Ger(ê|e)ncia)\b.*$/i, '')
+        .replace(/[.,;:]+$/, '')
+        .trim();
+    }
+    function buildPattern(labelsString) {
+      const raw = labelsString.split(',').map(l => l.trim()).filter(Boolean);
+      const labels = raw.map(l => l.replace(/:\s*$/, '')); // remove ":" final
+      const pattern = `(?:${labels.map(l => `${escapeRegex(l)}\\s*:?\\s*`).join('|')})([^\\n\\r;|\\-–—•]+)`;
+      return { regex: new RegExp(pattern, 'gi'), labels };
+    }
+    function updateThemeIcon(isDark) {
+      if (isDark) { moonIcon.classList.remove('hidden'); sunIcon.classList.add('hidden'); }
+      else { sunIcon.classList.remove('hidden'); moonIcon.classList.add('hidden'); }
+    }
+    function toggleTheme() {
+      const willDark = !htmlElement.classList.contains('dark');
+      htmlElement.classList.toggle('dark', willDark);
+      localStorage.setItem('theme', willDark ? 'dark' : 'light');
+      updateThemeIcon(willDark);
+    }
+
+    // extração do texto
+    async function extractTextPerPage(file, headerOnly, useOCR) {
+      const url = URL.createObjectURL(file);
+      const pdf = await pdfjsLib.getDocument(url).promise;
+      const numPages = pdf.numPages;
+      const pagesText = [];
+      logOutput.textContent += `\n- Total de páginas detectadas: ${numPages}`;
+      setProgress(0, 'Lendo páginas...');
+
+      for (let i = 1; i <= numPages; i++) {
+        const page = await pdf.getPage(i);
+        const viewport = page.getViewport({ scale: 1 });
+        const textContent = await page.getTextContent();
+        let allItems = textContent.items;
+
+        // filtrar cabeçalho (coordenada Y em PDF.js)
+        if (headerOnly) {
+          const headerBottom = viewport.height * (HEADER_BOTTOM_Y_PERCENT/100);
+          allItems = allItems.filter(item => item.transform[5] >= (viewport.height - headerBottom));
         }
 
-        function buildPattern(labelsString) {
-            const labels = labelsString.split(',').map(l => l.trim()).filter(Boolean);
-            const pattern = `(?:${labels.map(l => l.replace(/[-\/\\^$*+?.()|[\]{}]/g, '\\$&')).join('|')})\\s*([^\\n\\r]+)`;
-            return { regex: new RegExp(pattern, 'g'), labels };
+        let fullText = '';
+        if (allItems && allItems.length > 0) {
+          allItems.sort((a, b) => {
+            if (Math.abs(a.transform[5] - b.transform[5]) < 2) return a.transform[4] - b.transform[4];
+            return b.transform[5] - a.transform[5];
+          });
+          let lastY = allItems[0].transform[5];
+          for (const item of allItems) {
+            if (Math.abs(item.transform[5] - lastY) > 5) fullText += '\n';
+            fullText += item.str;
+            lastY = item.transform[5];
+          }
         }
 
-        function detectRuns(pagesText, pattern) {
-            const runs = [];
-            let lastRun = null;
-            pagesText.forEach((text, pageIndex) => {
-                const matches = [...text.matchAll(pattern)];
-                if (matches.length > 0) {
-                    const key = matches[0][1].trim();
-                    if (lastRun) {
-                        lastRun.end = pageIndex;
-                    }
-                    lastRun = { key, start: pageIndex + 1, end: 0 };
-                    runs.push(lastRun);
-                }
-            });
-            if (lastRun) {
-                lastRun.end = pagesText.length;
+        // fallback OCR se não veio texto
+        if (useOCR && (!fullText || !fullText.trim())) {
+          try {
+            const scale = 1.8;
+            const vp = page.getViewport({ scale });
+            const canvas = document.createElement('canvas');
+            const ctx = canvas.getContext('2d');
+            canvas.width = vp.width; canvas.height = vp.height;
+            await page.render({ canvasContext: ctx, viewport: vp }).promise;
+
+            let sourceCanvas = canvas;
+            if (headerOnly) {
+              const headerBottomPx = vp.height * (HEADER_BOTTOM_Y_PERCENT/100);
+              const crop = document.createElement('canvas');
+              crop.width = vp.width; crop.height = headerBottomPx;
+              crop.getContext('2d').drawImage(sourceCanvas, 0, 0, vp.width, headerBottomPx, 0, 0, vp.width, headerBottomPx);
+              sourceCanvas = crop;
             }
-            for(let i = 0; i < runs.length - 1; i++) {
-                runs[i].end = runs[i+1].start - 1;
+
+            if (!window.Tesseract) {
+              logOutput.textContent += `\n[OCR] Tesseract.js não carregado.`;
+            } else {
+              logOutput.textContent += `\n[OCR] Rodando OCR na página ${i}...`;
+              const { data } = await window.Tesseract.recognize(sourceCanvas, 'por+eng', {
+                logger: m => (m.status && m.progress!=null) ? (progressText.textContent = `OCR página ${i}: ${m.status} ${(m.progress*100).toFixed(0)}%`) : null
+              });
+              fullText = (data && data.text) ? data.text : '';
             }
-            return runs;
+          } catch (e) {
+            console.warn('Erro OCR página', i, e);
+            logOutput.textContent += `\n[OCR] Erro na página ${i}: ${e.message}`;
+          }
         }
 
-        function mergeByKey(runs) {
-            const merged = new Map();
-            runs.forEach(run => {
-                if (!merged.has(run.key)) {
-                    merged.set(run.key, []);
-                }
-                const pages = merged.get(run.key);
-                for (let i = run.start; i <= run.end; i++) {
-                    pages.push(i);
-                }
-            });
-            return merged;
+        pagesText.push(fullText || '');
+        if (i % 5 === 0 || i === numPages) logOutput.textContent += `\n- Extraídas ${i}/${numPages} páginas...`;
+        setProgress(Math.round((i/numPages)*50), `Extraindo texto ${i}/${numPages}`);
+      }
+
+      URL.revokeObjectURL(url);
+      return pagesText;
+    }
+
+    // runs/merge
+    function detectRuns(pagesText, pattern) {
+      const runs = [];
+      let lastRun = null;
+
+      pagesText.forEach((text, pageIndex) => {
+        const matches = [...text.matchAll(pattern)].map(m => cleanName(m[1]));
+        if (matches.length > 0) {
+          const key = matches[0];
+          if (lastRun) lastRun.end = pageIndex;
+          lastRun = { key, start: pageIndex + 1, end: 0 };
+          runs.push(lastRun);
+
+          if (matches.length > 1) {
+            logOutput.textContent += `\n[aviso] ${matches.length} nomes na página ${pageIndex+1}. Mantido: "${key}".`;
+          }
         }
+      });
 
-        async function splitAndDownload(originalPdfFile, mergedRuns) {
-            const { PDFDocument } = PDFLib;
-            const originalPdfBytes = await originalPdfFile.arrayBuffer();
+      if (lastRun) lastRun.end = pagesText.length;
+      for (let i = 0; i < runs.length - 1; i++) runs[i].end = runs[i+1].start - 1;
+      return runs;
+    }
 
-            logOutput.textContent += '\n\nIniciando geração dos PDFs...';
-            for (const [key, pages] of mergedRuns.entries()) {
-                const pdfDoc = await PDFDocument.create();
-                const sourcePdfDoc = await PDFDocument.load(originalPdfBytes);
+    function mergeByKey(runs) {
+      const map = new Map(); // key -> Set(pages)
+      for (const { key, start, end } of runs) {
+        if (!map.has(key)) map.set(key, new Set());
+        const set = map.get(key);
+        for (let p = start; p <= end; p++) set.add(p);
+      }
+      // ordenado
+      const ordered = new Map();
+      for (const [key, set] of map) ordered.set(key, [...set].sort((a,b)=>a-b));
+      return ordered;
+    }
 
-                const pageIndices = pages.map(p => p - 1);
-                const copiedPages = await pdfDoc.copyPages(sourcePdfDoc, pageIndices);
-                copiedPages.forEach(page => pdfDoc.addPage(page));
-                const pdfBytes = await pdfDoc.save();
+    // preview/seleção
+    function refreshSelectAllState() {
+      const total = previewBody.querySelectorAll('input[type=checkbox][data-key]').length;
+      const selected = previewBody.querySelectorAll('input[type=checkbox][data-key]:checked').length;
+      selectAllToggle.indeterminate = selected > 0 && selected < total;
+      selectAllToggle.checked = selected === total && total > 0;
+    }
 
-                const sanitizedKey = key.replace(/[^a-zA-Z0-9\s]/g, '').replace(/\s+/g, '_');
-                const originalName = originalPdfFile.name.replace(/\.pdf$/i, '');
-                const newFileName = `${originalName}_${sanitizedKey || 'sem_nome'}.pdf`;
-                const blob = new Blob([pdfBytes], { type: 'application/pdf' });
-                const link = document.createElement('a');
-                link.href = URL.createObjectURL(blob);
-                link.download = newFileName;
-                document.body.appendChild(link);
-                link.click();
-                document.body.removeChild(link);
+    function renderPreview(mergedRuns) {
+      previewBody.innerHTML = '';
+      selectedKeys = new Set();
+      mergedRuns.forEach((pages, key) => {
+        const tr = document.createElement('tr');
 
-                logOutput.textContent += `\n- PDF gerado: ${newFileName}`;
-            }
-            logOutput.textContent += '\n\nProcesso concluído!';
-        }
-
-        processBtn.addEventListener('click', async () => {
-            const file = pdfFileInput.files[0];
-            const labelsString = labelsInput.value;
-            if (!file || !labelsString) {
-                alert('Por favor, selecione um arquivo PDF e insira os rótulos.');
-                return;
-            }
-            loader.style.display = 'block';
-            processBtn.disabled = true;
-            logOutput.textContent = 'Iniciando processamento...';
-
-            try {
-                const { regex, labels } = buildPattern(labelsString);
-                logOutput.textContent += `\nRótulos de busca: ${labels.join(', ')}`;
-                const pagesText = await extractTextPerPage(file, headerOnlyCheckbox.checked);
-                const runs = detectRuns(pagesText, regex);
-                if (runs.length === 0) {
-                    logOutput.textContent += '\n\nNenhum rótulo/nome encontrado no documento.';
-                    return;
-                }
-                logOutput.textContent += `\n\n--- Ocorrências Detectadas ---`;
-                runs.forEach(run => {
-                    logOutput.textContent += `\n- Nome: "${run.key}", Páginas: ${run.start}-${run.end}`;
-                });
-
-                const mergedRuns = mergeByKey(runs);
-                logOutput.textContent += `\n\n--- Nomes Agrupados para Exportação ---`;
-                mergedRuns.forEach((pages, key) => {
-                    logOutput.textContent += `\n- ${key} (Total de ${pages.length} páginas)`;
-                });
-
-                await splitAndDownload(file, mergedRuns);
-            } catch (error) {
-                console.error('Erro durante o processamento:', error);
-                logOutput.textContent += `\n\nERRO: ${error.message}`;
-            } finally {
-                loader.style.display = 'none';
-                processBtn.disabled = false;
-            }
+        const tdSel = document.createElement('td');
+        tdSel.className = 'px-4 py-2';
+        const cb = document.createElement('input');
+        cb.type = 'checkbox'; cb.className = 'with-svg';
+        cb.checked = true;
+        cb.dataset.key = key;
+        cb.addEventListener('change', () => {
+          if (cb.checked) selectedKeys.add(key); else selectedKeys.delete(key);
+          refreshSelectAllState();
         });
-    </script>
+        tdSel.appendChild(cb);
+
+        const tdNome = document.createElement('td');
+        tdNome.className = 'px-4 py-2';
+        tdNome.textContent = key || '(sem nome)';
+
+        const tdPag = document.createElement('td');
+        tdPag.className = 'px-4 py-2 text-slate-600 dark:text-slate-400 text-sm';
+        tdPag.textContent = pages.join(', ');
+
+        const tdCount = document.createElement('td');
+        tdCount.className = 'px-4 py-2';
+        tdCount.textContent = pages.length;
+
+        tr.appendChild(tdSel); tr.appendChild(tdNome); tr.appendChild(tdPag); tr.appendChild(tdCount);
+        previewBody.appendChild(tr);
+
+        selectedKeys.add(key);
+      });
+
+      refreshSelectAllState();
+      previewSection.classList.remove('hidden');
+      // habilitar botões
+      const hasAny = mergedRuns.size > 0;
+      downloadPdfsBtn.disabled = !hasAny;
+      downloadZipBtn.disabled  = !hasAny;
+      exportCsvBtn.disabled    = !hasAny;
+    }
+
+    selectAllToggle.addEventListener('change', () => {
+      const check = selectAllToggle.checked;
+      previewBody.querySelectorAll('input[type=checkbox][data-key]').forEach(cb => {
+        cb.checked = check;
+        const key = cb.dataset.key;
+        if (check) selectedKeys.add(key); else selectedKeys.delete(key);
+      });
+      refreshSelectAllState();
+    });
+
+    // geração download
+    async function splitAndDownload(originalPdfFile, mergedRuns, { forceZip=false, zipThreshold=8, onlyKeys=null } = {}) {
+      const { PDFDocument } = PDFLib;
+      const originalPdfBytes = await originalPdfFile.arrayBuffer();
+      const sourcePdfDoc = await PDFDocument.load(originalPdfBytes);
+
+      const outputs = []; // { name, bytes }
+      const total = onlyKeys ? onlyKeys.length : mergedRuns.size;
+      let done = 0;
+
+      logOutput.textContent += '\n\nIniciando geração dos PDFs...';
+      for (const [key, pages] of mergedRuns.entries()) {
+        if (onlyKeys && !onlyKeys.includes(key)) continue;
+
+        const pdfDoc = await PDFDocument.create();
+        const pageIndices = pages.map(p => p - 1);
+        const copiedPages = await pdfDoc.copyPages(sourcePdfDoc, pageIndices);
+        copiedPages.forEach(page => pdfDoc.addPage(page));
+        const pdfBytes = await pdfDoc.save();
+
+        const sanitizedKey = (key || 'sem_nome')
+          .normalize('NFD').replace(/[\u0300-\u036f]/g, '')
+          .replace(/[^a-zA-Z0-9\s_-]/g, '').trim().replace(/\s+/g, '_')
+          .slice(0, 80) || 'sem_nome';
+
+        const originalName = originalPdfFile.name.replace(/\.pdf$/i, '');
+        const newFileName = `${originalName}_${sanitizedKey}.pdf`;
+        outputs.push({ name: newFileName, bytes: pdfBytes });
+
+        done++;
+        setProgress(50 + Math.round((done/total)*40), `Preparando PDFs ${done}/${total}`);
+        logOutput.textContent += `\nPDF preparado: ${newFileName} (${pages.length} pág.)`;
+      }
+
+      const shouldZip = forceZip || (autoZipToggle.checked && outputs.length >= zipThreshold);
+
+      if (shouldZip) {
+        const { default: JSZip } = await import('https://cdn.jsdelivr.net/npm/jszip@3.10.1/dist/jszip.min.js');
+        const zip = new JSZip();
+        outputs.forEach(o => zip.file(o.name, o.bytes));
+        const content = await zip.generateAsync({ type: 'blob' });
+        const zipName = originalPdfFile.name.replace(/\.pdf$/i, '') + '_agrupado.zip';
+
+        const url = URL.createObjectURL(content);
+        const a = Object.assign(document.createElement('a'), { href: url, download: zipName });
+        document.body.appendChild(a); a.click(); document.body.removeChild(a);
+        setTimeout(() => URL.revokeObjectURL(url), 2000);
+
+        logOutput.textContent += `\n\nZIP gerado: ${zipName}`;
+      } else {
+        for (const o of outputs) {
+          const blob = new Blob([o.bytes], { type: 'application/pdf' });
+          const url = URL.createObjectURL(blob);
+          const a = Object.assign(document.createElement('a'), { href: url, download: o.name });
+          document.body.appendChild(a); a.click(); document.body.removeChild(a);
+          setTimeout(() => URL.revokeObjectURL(url), 2000);
+        }
+        logOutput.textContent += '\n\nDownloads concluídos!';
+      }
+
+      setProgress(100, 'Concluído');
+    }
+
+    function exportCsv(mergedRuns, originalPdfFile, { onlyKeys=null } = {}) {
+      const rows = [['nome','paginas','total_paginas']];
+      mergedRuns.forEach((pages, key) => {
+        if (onlyKeys && !onlyKeys.includes(key)) return;
+        rows.push([key, pages.join(' '), pages.length]);
+      });
+      const csv = rows.map(r => r.map(v => `"${String(v).replace(/"/g,'""')}"`).join(';')).join('\r\n');
+      const blob = new Blob([csv], { type: 'text/csv;charset=utf-8' });
+      const url = URL.createObjectURL(blob);
+      const name = originalPdfFile.name.replace(/\.pdf$/i, '') + '_mapa.csv';
+      const a = Object.assign(document.createElement('a'), { href: url, download: name });
+      document.body.appendChild(a); a.click(); document.body.removeChild(a);
+      setTimeout(() => URL.revokeObjectURL(url), 2000);
+      logOutput.textContent += `\nCSV gerado: ${name}`;
+    }
+
+    // eventos - ui
+    document.addEventListener('DOMContentLoaded', () => {
+      // tema: inicia SEMPRE claro quando não houver preferência salva
+      const savedTheme = localStorage.getItem('theme');
+      const isDark = savedTheme === 'dark';
+      htmlElement.classList.toggle('dark', isDark);
+      updateThemeIcon(isDark);
+
+      // preferências
+      const lsLabels = localStorage.getItem('labels'); if (lsLabels) labelsInput.value = lsLabels;
+      const lsHeader = localStorage.getItem('headerOnly'); if (lsHeader !== null) headerOnlyEl.checked = lsHeader === 'true';
+      const lsOcr = localStorage.getItem('ocrToggle'); if (lsOcr !== null) ocrToggleEl.checked = lsOcr === 'true';
+      const lsAutoZip = localStorage.getItem('autoZipToggle'); if (lsAutoZip !== null) autoZipToggle.checked = lsAutoZip === 'true';
+    });
+
+    themeToggle.addEventListener('click', toggleTheme);
+    labelsInput.addEventListener('input', () => localStorage.setItem('labels', labelsInput.value));
+    headerOnlyEl.addEventListener('change', () => localStorage.setItem('headerOnly', String(headerOnlyEl.checked)));
+    ocrToggleEl.addEventListener('change', () => localStorage.setItem('ocrToggle', String(ocrToggleEl.checked)));
+    autoZipToggle.addEventListener('change', () => localStorage.setItem('autoZipToggle', String(autoZipToggle.checked)));
+
+    function fileLooksPdf(file) {
+      if (!file) return false;
+      if (file.type === 'application/pdf') return true;
+      return /\.pdf$/i.test(file.name || '');
+    }
+
+    dropZone.addEventListener('dragover', (e) => {
+      e.preventDefault();
+      dropZone.classList.add('border-primary-blue','bg-slate-100','dark:bg-gray-800');
+      dropZone.classList.remove('border-primary-blue/50');
+    });
+    dropZone.addEventListener('dragleave', () => {
+      dropZone.classList.remove('border-primary-blue','bg-slate-100','dark:bg-gray-800');
+      dropZone.classList.add('border-primary-blue/50');
+    });
+    dropZone.addEventListener('drop', (e) => {
+      e.preventDefault();
+      dropZone.classList.remove('border-primary-blue','bg-slate-100','dark:bg-gray-800');
+      dropZone.classList.add('border-primary-blue/50');
+
+      const files = e.dataTransfer.files;
+      if (files.length > 0 && fileLooksPdf(files[0])) {
+        pdfFileInput.files = files;
+        fileNameDisplay.textContent = `Arquivo selecionado: ${files[0].name}`;
+      } else {
+        alert('Por favor, solte um arquivo PDF válido.');
+        fileNameDisplay.textContent = ''; pdfFileInput.value = '';
+      }
+    });
+
+    pdfFileInput.addEventListener('change', (e) => {
+      if (e.target.files.length > 0) fileNameDisplay.textContent = `Arquivo selecionado: ${e.target.files[0].name}`;
+      else fileNameDisplay.textContent = '';
+    });
+
+    processBtn.addEventListener('click', async () => {
+      const file = pdfFileInput.files[0];
+      const labelsString = labelsInput.value;
+      if (!file || !labelsString) { alert('Por favor, selecione um arquivo PDF e insira os rótulos.'); return; }
+
+      loader.classList.remove('hidden');
+      processBtn.disabled = true;
+      downloadPdfsBtn.disabled = true;
+      downloadZipBtn.disabled = true;
+      exportCsvBtn.disabled = true;
+      previewSection.classList.add('hidden');
+      logOutput.textContent = 'Iniciando processamento...';
+      setProgress(0, 'Preparando...');
+
+      try {
+        const { regex, labels } = buildPattern(labelsString);
+        logOutput.textContent += `\nRótulos de busca: ${labels.join(', ')}`;
+
+        const pagesText = await extractTextPerPage(file, headerOnlyEl.checked, ocrToggleEl.checked);
+        const runs = detectRuns(pagesText, regex);
+
+        if (runs.length === 0) {
+          logOutput.textContent += '\n\nNenhum rótulo/nome encontrado no documento.';
+          setProgress(100, 'Concluído (sem ocorrências)');
+          return;
+        }
+
+        logOutput.textContent += `\n\n--- Ocorrências Detectadas ---`;
+        runs.forEach(run => { logOutput.textContent += `\nNome: "${run.key}", Páginas: ${run.start}-${run.end}`; });
+
+        const mergedRuns = mergeByKey(runs);
+        mergedRunsGlobal = mergedRuns;
+
+        logOutput.textContent += `\n\n--- Nomes Agrupados para Exportação ---`;
+        mergedRuns.forEach((pages, key) => { logOutput.textContent += `\n${key} (Total de ${pages.length} páginas)`; });
+
+        // preview + habilitar botões
+        renderPreview(mergedRuns);
+        setProgress(60, 'Pronto para exportar');
+      } catch (error) {
+        console.error('Erro durante o processamento:', error);
+        logOutput.textContent += `\n\nERRO: ${error.message}`;
+        setProgress(0, 'Erro');
+      } finally {
+        loader.classList.add('hidden');
+        processBtn.disabled = false;
+      }
+    });
+
+    downloadPdfsBtn.addEventListener('click', async () => {
+      if (!pdfFileInput.files[0]) return;
+      const keys = Array.from(selectedKeys);
+      if (keys.length === 0) { alert('Selecione pelo menos um grupo.'); return; }
+      setProgress(65, 'Gerando PDFs...');
+      await splitAndDownload(pdfFileInput.files[0], mergedRunsGlobal, { forceZip:false, onlyKeys:keys });
+    });
+
+    downloadZipBtn.addEventListener('click', async () => {
+      if (!pdfFileInput.files[0]) return;
+      const keys = Array.from(selectedKeys);
+      if (keys.length === 0) { alert('Selecione pelo menos um grupo.'); return; }
+      setProgress(65, 'Gerando ZIP...');
+      await splitAndDownload(pdfFileInput.files[0], mergedRunsGlobal, { forceZip:true, onlyKeys:keys });
+    });
+
+    exportCsvBtn.addEventListener('click', () => {
+      if (!pdfFileInput.files[0]) return;
+      const keys = Array.from(selectedKeys);
+      if (keys.length === 0) { alert('Selecione pelo menos um grupo.'); return; }
+      exportCsv(mergedRunsGlobal, pdfFileInput.files[0], { onlyKeys:keys });
+    });
+  </script>
+
+  <!-- tesseract cdn -->
+  <script src="https://cdn.jsdelivr.net/npm/tesseract.js@5/dist/tesseract.min.js"></script>
 </body>
 </html>
